@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.account import User, LoginSession
+from app.config import settings
 
 def digest(token):
     return hashlib.sha256(token.encode()).hexdigest()
@@ -19,6 +20,7 @@ def current_user(request: Request, db: Session = Depends(get_db)):
 
 def check_origin(request: Request):
     origin = request.headers.get("origin")
-    if origin and origin.rstrip("/") != str(request.base_url).rstrip("/"):
+    expected = settings.canonical_origin or str(request.base_url).rstrip("/")
+    if origin and origin.rstrip("/") != expected:
         raise HTTPException(403, "Origen no permitido")
 

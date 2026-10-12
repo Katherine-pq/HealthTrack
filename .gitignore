@@ -1,10 +1,17 @@
 __pycache__/
 *.pyc
 .env
+.env.*
+!.env.example
+!.env.*.example
 node_modules/
 dist/
 .DS_Store
 venv/
+.pulumi/
+infra/aws-pulumi/evidence/raw/
+*.log
+*.tsbuildinfo
 
-# Material temporal de revisión
+# Material temporal de revision
 tmp/

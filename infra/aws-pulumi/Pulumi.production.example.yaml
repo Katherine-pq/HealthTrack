@@ -1,0 +1,13 @@
+config:
+  aws:region: us-east-1
+  healthtrack-aws:environment: production
+  healthtrack-aws:desiredCount: 2
+  healthtrack-aws:cpu: 512
+  healthtrack-aws:memory: 1024
+  healthtrack-aws:databaseVersion: "18.6"
+  healthtrack-aws:backupRetentionDays: 7
+  healthtrack-aws:monthlyBudgetUsd: 150
+  healthtrack-aws:expectedAccount: "000000000000"
+  healthtrack-aws:imageTag: release-YYYYMMDDHHMMSS
+  healthtrack-aws:deploymentId: YYYYMMDDHHMMSS
+# Ejemplo sin secretos. RDS administra la clave maestra en Secrets Manager.

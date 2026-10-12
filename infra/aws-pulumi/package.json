@@ -1,0 +1,20 @@
+{
+  "name": "healthtrack-aws",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.cjs"
+  },
+  "dependencies": {
+    "@pulumi/aws": "7.50.0",
+    "@pulumi/command": "1.2.1",
+    "@pulumi/docker": "5.2.0",
+    "@pulumi/pulumi": "3.268.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.3"
+  }
+}

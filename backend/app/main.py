@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import secrets
 from pathlib import Path
@@ -7,20 +6,34 @@ from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.database import Base, engine, get_db
+from app.database import get_db
 from app.models.account import User, LoginSession
 from app.auth import current_user, check_origin, digest
+from app.config import settings
+from app.rate_limit import limit_login, limit_registration
 from app.routes.devices import router as devices_router
 
-@asynccontextmanager
-async def lifespan(app):
-    Base.metadata.create_all(bind=engine)
-    yield
+app = FastAPI(
+    title="HealthTrack API",
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
+    openapi_url=None if settings.is_production else "/openapi.json",
+)
 
-app = FastAPI(title="HealthTrack API", lifespan=lifespan)
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if settings.is_production:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 class Credentials(BaseModel):
     email: EmailStr
@@ -57,7 +70,18 @@ def public_user(user):
 def health():
     return {"status": "ok"}
 
-@app.post("/api/auth/register", status_code=201, dependencies=[Depends(check_origin)])
+
+@app.get("/ready")
+def ready(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
+    return {"status": "ready"}
+
+
+@app.post(
+    "/api/auth/register",
+    status_code=201,
+    dependencies=[Depends(check_origin), Depends(limit_registration)],
+)
 def register(data: Registration, db: Session = Depends(get_db)):
     user = User(name=data.name, email=str(data.email), password_hash=bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode())
     db.add(user)
@@ -69,7 +93,10 @@ def register(data: Registration, db: Session = Depends(get_db)):
         raise HTTPException(409, "Ya existe una cuenta con este correo")
     return public_user(user)
 
-@app.post("/api/auth/login", dependencies=[Depends(check_origin)])
+@app.post(
+    "/api/auth/login",
+    dependencies=[Depends(check_origin), Depends(limit_login)],
+)
 def login(data: Credentials, request: Request, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == str(data.email)).first()
     if not user or not bcrypt.checkpw(data.password.encode(), user.password_hash.encode()):
@@ -79,7 +106,15 @@ def login(data: Credentials, request: Request, response: Response, db: Session =
     token = secrets.token_urlsafe(32)
     db.add(LoginSession(token_hash=digest(token), user_id=user.id, expires_at=datetime.now(timezone.utc) + timedelta(hours=8)))
     db.commit()
-    response.set_cookie("healthtrack_session", token, httponly=True, samesite="lax", secure=request.url.scheme == "https", max_age=28800, path="/")
+    response.set_cookie(
+        "healthtrack_session",
+        token,
+        httponly=True,
+        samesite="lax",
+        secure=settings.is_production or request.url.scheme == "https",
+        max_age=28800,
+        path="/",
+    )
     response.headers["Cache-Control"] = "no-store"
     return public_user(user)
 

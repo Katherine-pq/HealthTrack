@@ -1,6 +1,6 @@
 # HealthTrack — Release 1
 
-Aplicación monolítica con React compilado servido por FastAPI y PostgreSQL como persistencia. Las carpetas frontend y backend separan el código, pero Docker construye y ejecuta una sola aplicación (`app`) además de la base de datos (`db`).
+Aplicación monolítica con React compilado servido por FastAPI y PostgreSQL como persistencia. Las carpetas frontend y backend separan el código, pero Docker construye y ejecuta una sola aplicación (`app`) además de la base de datos (`db`). La publicación productiva utiliza Pulumi, CloudFront, WAF, ECS Fargate y RDS PostgreSQL.
 
 ## Ejecutar
 
@@ -29,11 +29,22 @@ Los usuarios y sesiones persisten en el volumen `pgdata`. No usar `down -v` para
 - Dashboard personal con métricas ficticias persistidas en PostgreSQL y módulos futuros deshabilitados.
 - Diseño responsive basado en las tres imágenes de `frontend/src/assets/prototype`.
 
-La cuenta no tiene verificación por correo ni recuperación de contraseña. Google, Apple, passkeys, integración con dispositivos físicos, historial con filtros y metas no están implementados en esta etapa. Antes de publicar en nube faltan HTTPS, limitación de intentos, revisión de configuración y pruebas de despliegue. Las fuentes web tienen alternativa local sans-serif.
+La cuenta no tiene verificación por correo ni recuperación de contraseña. Google, Apple, passkeys, integración con dispositivos físicos, historial con filtros y metas no están implementados en esta etapa. La publicación en AWS incorpora HTTPS, WAF, limitación de intentos, secretos administrados, migraciones controladas y pruebas de despliegue. Las fuentes web tienen alternativa local sans-serif.
 
 ## Configuración
 
-`backend/.env` se carga en Docker; Compose fija el host `db` y alinea el usuario, contraseña y nombre de base con el servicio PostgreSQL. Los valores locales por defecto son postgres/postgres/wearable_db. Configurar credenciales propias para nube. Cambiar variables no cambia automáticamente la contraseña de un volumen PostgreSQL ya inicializado.
+`backend/.env` se carga únicamente en Docker local; Compose fija el host `db` y alinea el usuario, contraseña y nombre de base con PostgreSQL. En AWS, RDS genera y rota la credencial maestra mediante Secrets Manager y ECS la recibe como referencia, nunca como texto en Pulumi o Git. Cambiar variables no cambia automáticamente la contraseña de un volumen PostgreSQL ya inicializado.
+
+## Despliegue AWS
+
+La infraestructura está en `infra/aws-pulumi` y sigue módulos separados para red, seguridad, datos, entrega, aplicación y observabilidad. El entorno productivo incluye:
+
+- CloudFront HTTPS, AWS WAF y Application Load Balancer privado.
+- Dos tareas ECS Fargate con health checks, rollback y autoescalado.
+- RDS PostgreSQL 18.6 Multi-AZ, cifrado, TLS obligatorio, backups y protección de borrado.
+- ECR inmutable con escaneo, KMS, CloudWatch, CloudTrail y presupuesto.
+
+Las credenciales de despliegue se leen desde `.env.aws` por un wrapper que no imprime sus valores. Consultar `infra/aws-pulumi/README.md` para preview, publicación y actualización de imágenes.
 
 ## Desarrollo local opcional
 

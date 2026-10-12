@@ -4,7 +4,7 @@ from app.database import Base
 class Device(Base):
     __tablename__ = "devices"
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     name = Column(String(80), nullable=False)
     brand = Column(String(80), nullable=False)
     model = Column(String(80), nullable=False)
@@ -19,7 +19,7 @@ class DailyMetric(Base):
         CheckConstraint("steps >= 0 AND calories >= 0 AND heart_rate > 0 AND sleep_minutes >= 0 AND sleep_minutes <= 1440", name="ck_metrics_values"),
     )
     id = Column(Integer, primary_key=True)
-    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    device_id = Column(Integer, ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
     date = Column(Date, nullable=False)
     steps = Column(Integer, nullable=False)
     calories = Column(Integer, nullable=False)

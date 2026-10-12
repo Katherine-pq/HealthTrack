@@ -1,0 +1,50 @@
+name: HealthTrack CI
+
+on:
+  push:
+    branches: [main, DespliegueAWS]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            infra/aws-pulumi/package-lock.json
+      - name: Frontend audit and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npm run build
+      - name: Pulumi static validation
+        working-directory: infra/aws-pulumi
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+      - name: Start the complete application
+        run: |
+          cp backend/.env.example backend/.env
+          docker compose up -d --build
+      - name: Functional tests
+        run: |
+          for attempt in {1..30}; do curl -fsS http://localhost:5173/ready && break; sleep 2; done
+          python tests/test_auth.py
+          python tests/test_devices.py
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop the application
+        if: always()
+        run: docker compose down -v

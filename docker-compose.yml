@@ -18,12 +18,15 @@ services:
   app:
     build: .
     restart: unless-stopped
+    command: ["sh", "-c", "alembic -c /app/alembic.ini upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"]
     env_file: ./backend/.env
     environment:
+      APP_ENVIRONMENT: development
       POSTGRES_HOST: db
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-wearable_db}
+      POSTGRES_SSLMODE: disable
     ports:
       - "5173:8000"
     depends_on:

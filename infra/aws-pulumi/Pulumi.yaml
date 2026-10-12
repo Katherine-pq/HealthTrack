@@ -1,0 +1,7 @@
+name: healthtrack-aws
+description: Infraestructura productiva de HealthTrack en AWS.
+runtime:
+  name: nodejs
+  options:
+    typescript: true
+main: src

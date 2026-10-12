@@ -1,5 +1,5 @@
-import json, urllib.request, urllib.error, http.cookiejar, uuid
-base="http://localhost:5173"
+import json, urllib.request, urllib.error, http.cookiejar, uuid, os
+base=os.environ.get("HEALTHTRACK_BASE_URL", "http://localhost:5173").rstrip("/")
 jar=http.cookiejar.CookieJar()
 client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 def call(path,data=None,expected=200,origin=base):

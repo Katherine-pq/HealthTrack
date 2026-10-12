@@ -4,9 +4,10 @@ import json
 import urllib.request
 import urllib.error
 import uuid
+import os
 from concurrent.futures import ThreadPoolExecutor
 
-BASE = "http://localhost:5173"
+BASE = os.environ.get("HEALTHTRACK_BASE_URL", "http://localhost:5173").rstrip("/")
 
 def client():
     return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
